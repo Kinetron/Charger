@@ -599,13 +599,12 @@ uint8_t ssd1306_GetDisplayOn() {
     return SSD1306.DisplayOn;
 }
 
-#include "ssd1306_fonts.h"
 
 /* Write full string to screenbuffer */
-char ssd1306_PrintString(char* str) {
+char ssd1306_PrintString(char* str, uint8_t scale) {
     while (*str) {
   
-        if (ssd1306_PrintChar(*str) != *str) {
+        if (ssd1306_PrintChar(*str, scale) != *str) {
             // Char could not be written
             return *str;
         }
@@ -616,21 +615,15 @@ char ssd1306_PrintString(char* str) {
     return *str;
 }
 
-/*
- * Draw 1 char to the screen buffer
- * ch       => char om weg te schrijven
- * Font     => Font waarmee we gaan schrijven
- * color    => Black or White
- */
-char ssd1306_PrintChar(char ch) {
+char ssd1306_PrintChar(char ch, uint8_t scale) {
+
     uint32_t i, bits;
-    uint8_t scale = 2;
  
     if(ch == 0xd0 || ch == 0xd1) return ch; //skip utf 16 characters
 
     for (uint8_t col = 0; col < 6; col++) 
     {
-        bits = getFontAdd((char)ch, col);
+        bits = _getFontAdd((char)ch, col);
 
         if(scale == 2)
         {
@@ -679,8 +672,7 @@ void _spacesBetweenLetters(uint8_t lengthPx, uint8_t scale)
     }    
 }
 
-
-uint8_t getFontAdd(uint8_t font, uint8_t row) 
+uint8_t _getFontAdd(uint8_t font, uint8_t row) 
 {
 	font = font - '0' + 16;   //Translation of the character code from the ASCII table to a number according to the numbering of the array
 	
@@ -692,67 +684,5 @@ uint8_t getFontAdd(uint8_t font, uint8_t row)
     else if (font >= 96 && font <= 111) 
     {
 		return additionalCharMap[font + 47][row];
-	}
-}
-
-void printChar(char c)
-{	
-//#if !defined(SOFT_BUFFER) || defined(HARD_BUFFER)
-//	Wire.beginTransmission(OLED_ADDRESS);
-//	Wire.write(OLED_DATA_MODE);
-
-     // Wire.write(bits);
-}
-
-void println(char c)
- {
-	printChar(c);
-	_y += _scale;
-	if (_y > _numRows-1) _y = _numRows-1;
-	ssd1306_SetCursor(_x, _y);
-}
-
-void printline(void) 
-{
-	_y += _scale;
-	_x = 0;
-	if (_y > _numRows-1) _y = _numRows-1;
-	ssd1306_SetCursor(_x, _y);
-}
-
-void print(char c)
-{	
-	if ((uint8_t)c == 10) 
-    {
-      printline();
-    }
-	else {
-		if ((uint8_t)c <= 127) 
-        {
-            ssd1306_PrintChar(c);
-            printChar(c); _x += _scale;
-        }		// если лат. буквы и символы
-		else {
-			if (_lastChar == 209 && (uint8_t)c == 145) printChar((char)181);			// е вместо ё
-			else if (_lastChar == 208 && (uint8_t)c == 129) printChar((char)149);		// Е вместо Ё
-			else if (_lastChar == 226 && (uint8_t)c == 128) ;							// тире вместо длинного тире
-			else if (_lastChar == 128 && (uint8_t)c == 147) {printChar((char)45);
-            _x += _scale;}		// тире вместо длинного тире			
-			else if ((uint8_t)c <= 191) {printChar(c); _x += _scale;}
-		}
-		_lastChar = c;		
-		
-		if (_x >= 20) {
-			_x = 0;
-			_y += _scale;			
-		}
-		ssd1306_SetCursor(_x, _y);
-	}	
-}
-
-void printString(const char* data, uint8_t len)
-{
-	for (uint8_t i = 0; i < len; i++) {
-		print((char)data[i]);
 	}
 }

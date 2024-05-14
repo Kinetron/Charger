@@ -168,14 +168,13 @@ void ssd1306_Polyline(const SSD1306_VERTEX *par_vertex, uint16_t par_size, SSD13
 void ssd1306_DrawRectangle(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, SSD1306_COLOR color);
 void ssd1306_FillRectangle(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, SSD1306_COLOR color);
 
-char ssd1306_PrintString(char* str);
-char ssd1306_PrintChar(char ch);
+//Work with utf16 chars.
+char ssd1306_PrintString(char* str, uint8_t scale);
+char ssd1306_PrintChar(char ch, uint8_t scale);
+
 void _spacesBetweenLetters(uint8_t lengthPx, uint8_t scale);
 int _stretch (int x);
-void println(char c);
-uint8_t getFontAdd(uint8_t font, uint8_t row);
-void printString(const char* data, uint8_t len);
-void printline(void);
+uint8_t _getFontAdd(uint8_t font, uint8_t row);
 
 
 /**

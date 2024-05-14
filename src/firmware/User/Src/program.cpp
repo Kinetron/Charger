@@ -20,6 +20,11 @@
 #define ADC_MAX 0xFFF //Max adc value.
 #define VOLTAGE_STR_LEN 5
 
+#define DISPLAY_VOLTAGE 0
+#define DISPLAY_CURRENT 1
+#define DISPLAY_CAPACITY 2
+#define DISPLAY_PERCENTS 3
+ 
 extern IWDG_HandleTypeDef hiwdg;
 extern TIM_HandleTypeDef htim3;
 extern ADC_HandleTypeDef hadc1;
@@ -32,6 +37,10 @@ uint32_t adcData[ADC_NUMBER_OF_CHANNELS]; //Measured adc values.
 char PassWord_W[10] = {"ABC123xyz"};
 char PassWord_R[9];
 bool logoSwith = false;
+
+char displayStr[30]; //To display data on the screen.
+bool animationFlag = false; //To flash the animation on the screen
+
 
 // Options for the status of the transmission method.
 enum TxState
@@ -83,35 +92,56 @@ void setup( void )
     //flash_write_test();
 }
 
-
-void printWine()
-{
- if(logoSwith)
-     {
-       logoSwith = false;
-       //ssd1306_WriteString("Got beer?", Font_11x18, White);
-       ssd1306_SetCursor(2,0);
-       ssd1306_WriteString("Would you like", Font_7x10, White);
-       ssd1306_SetCursor(2,15);
-       ssd1306_WriteString("some wine?", Font_7x10, White);
-       ssd1306_SetCursor(0,24);
-       ssd1306_WriteString("chat gpt say", Font_6x8, White);
-     }
-     else
-     {
-       //ssd1306_WriteString("Got beer ?", Font_11x18, White); 
-       logoSwith = true;
-       ssd1306_SetCursor(2,0);
-       ssd1306_WriteString("Would you like", Font_7x10, White);
-       ssd1306_SetCursor(2,15);
-       ssd1306_WriteString("some wine ?", Font_7x10, White);
-     }   
-}
-
 void voltageToString(uint32_t adc, char* str)
 {
    float voltage = adc  * ADC_REFERENCE_VOLTAGE / ADC_MAX;
-   sprintf(str,"%d.%02d ", (uint32_t)voltage, (uint16_t)((voltage - (uint32_t)voltage) * 100.));
+   sprintf(str,"%d.%02d ", (uint32_t)voltage, (uint16_t)((voltage - (uint32_t)voltage) * 100.));    
+}
+
+//Show on display the current or voltage
+void printDisplayParameter(uint16_t data, uint8_t paramType)
+{
+   sprintf(displayStr,"%d.%02d ", (uint16_t)data / 100, (uint16_t)(data % 100));
+
+   char* simvol = "В";
+
+   switch (paramType)
+   {
+    case DISPLAY_VOLTAGE: 
+      ssd1306_SetCursor(0, 18);
+    break;
+   
+    case DISPLAY_CURRENT:
+      ssd1306_SetCursor(80, 18);
+      simvol = "A";
+    break;
+
+    case DISPLAY_CAPACITY: 
+      ssd1306_SetCursor(0, 0);
+      simvol = "Ah";
+    break;
+
+    case DISPLAY_PERCENTS:
+      sprintf(displayStr,"%d ", data);
+      ssd1306_SetCursor(90, 0);
+      
+      if(animationFlag)
+      {
+        simvol = "% ";  
+      }
+      else
+      {
+        simvol = "%^";
+      }
+      animationFlag = !animationFlag;
+    break; 
+ 
+   default:
+    break;
+   }
+  
+   ssd1306_PrintString(displayStr, 2);
+   ssd1306_PrintString(simvol, 2);
 }
 
 /**
@@ -121,24 +151,27 @@ void voltageToString(uint32_t adc, char* str)
 
 void loop( void )
 {
-    HAL_Delay( 1000 );
+    HAL_Delay(1000);
      //HAL_GPIO_TogglePin( USER_LED_GPIO_Port, USER_LED_Pin);
 
     HAL_IWDG_Refresh(&hiwdg);
 
-    //ssd1306_Fill(Black);
-    //printWine();     
-    //ssd1306_UpdateScreen();
-    //printString("Привет", 3);
-    ssd1306_SetCursor(0,0);
-  
+    //ssd1306_SetCursor(0,0);
+    //ssd1306_PrintString("ЗАПУСК..", 2);
+
+    printDisplayParameter(1356, DISPLAY_VOLTAGE);
+    printDisplayParameter(1238, DISPLAY_CURRENT); 
+    printDisplayParameter(12838, DISPLAY_CAPACITY); 
+    printDisplayParameter(98, DISPLAY_PERCENTS); 
+//
+
      //   ssd1306_WriteString("454", Font_7x10, White);
-     char *test ="Привет";
-     char test1[20];
+     //char *test ="Привет";
+     //char test1[20];
     //sprintf(test1,"%02X", test[2]);
     //ssd1306_WriteString(test1, Font_7x10, White);
     //ssd1306_PrintChar(76);
-    ssd1306_PrintString("Привет мир hello");
+   
     ssd1306_UpdateScreen();
    return;
 
