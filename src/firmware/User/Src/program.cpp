@@ -15,7 +15,7 @@
 #define UART huart1
 #define ADC_REFERENCE_VOLTAGE 3.3
 #define ADC_MAX 0xFFF //Max adc value.
-#define VOLTAGE_STR_LEN 5
+#define PARAM_STR_LEN 5
 
 #define DISPLAY_VOLTAGE 0
 #define DISPLAY_CURRENT 1
@@ -50,6 +50,12 @@ bool logoSwith = false;
 char displayStr[30]; //To display data on the screen.
 bool animationFlag = false; //To flash the animation on the screen
 
+char usartString[USART_STRING_SIZE]; //The string that will be sent via usart.
+
+float actualVoltage;
+float actualCurrent;
+float actualCapacity;
+
 /**
  * \brief  Performs initialization. 
  *
@@ -74,13 +80,7 @@ void setup( void )
     }
     ssd1306_Init();
 
-   HAL_IWDG_Refresh(&hiwdg); 
-  //FEE_Write(FEE_START_ADDRESS, (uint16_t*)PassWord_W, sizeof(char)*9);
-  //FEE_Read(FEE_START_ADDRESS, (uint16_t*)PassWord_R, sizeof(char)*9);
-  //sprintf(usartString, "Read= %s\r\n", PassWord_R);
-   // uint8_t *buff = flash_read_test();   
-    //HAL_UART_Transmit(&UART, buff, 24, 50);
-    //flash_write_test();
+   HAL_IWDG_Refresh(&hiwdg);
 }
 
 float calculatedDC(uint32_t adcValue, bool paramType)
@@ -95,12 +95,17 @@ float calculatedDC(uint32_t adcValue, bool paramType)
    }
 }
 
+void toFloatStr(float data, char* str)
+{
+  sprintf(str, "%d.%02d", (uint32_t)data, (uint16_t)((data - (uint32_t)data) * 100.)); 
+}
+
 //Show on display the current or voltage
 void printDisplayParameter(float data, uint8_t paramType)
 {
-   sprintf(displayStr, "%d.%02d ", (uint32_t)data, (uint16_t)((data - (uint32_t)data) * 100.)); 
+   toFloatStr(data, displayStr);
 
-   char* simvol = "В";
+   char* simvol = " В";
 
    switch (paramType)
    {
@@ -110,12 +115,12 @@ void printDisplayParameter(float data, uint8_t paramType)
    
     case DISPLAY_CURRENT:
       ssd1306_SetCursor(80, 18);
-      simvol = "A";
+      simvol = " A";
     break;
 
     case DISPLAY_CAPACITY: 
       ssd1306_SetCursor(0, 0);
-      simvol = "Ah";
+      simvol = " Ah";
     break;
 
     case DISPLAY_PERCENTS:
@@ -124,11 +129,11 @@ void printDisplayParameter(float data, uint8_t paramType)
       
       if(animationFlag)
       {
-        simvol = "% ";  
+        simvol = " % ";  
       }
       else
       {
-        simvol = "%^";
+        simvol = "% ";
       }
       animationFlag = !animationFlag;
     break; 
@@ -139,6 +144,33 @@ void printDisplayParameter(float data, uint8_t paramType)
   
    ssd1306_PrintString(displayStr, 2);
    ssd1306_PrintString(simvol, 2);
+}
+
+char tmpStr[PARAM_STR_LEN];
+void sendParametersToUsart(float voltage, float current, float capacity)
+{
+  uint8_t lastPos = 0;
+  
+  usartString[0] = '\0';
+  toFloatStr(voltage, usartString);
+  lastPos = strlen(usartString);
+
+  strcpy(usartString + lastPos, " V ");
+  lastPos = strlen(usartString); 
+
+  toFloatStr(current, usartString + lastPos);
+  lastPos = strlen(usartString);
+
+  strcpy(usartString + lastPos, " A ");
+  lastPos= strlen(usartString);
+
+  toFloatStr(capacity, usartString + lastPos);
+  lastPos= strlen(usartString);;
+
+  strcpy(usartString + lastPos, " Ah\n");
+  
+  HAL_IWDG_Refresh(&hiwdg);
+  HAL_UART_Transmit( & UART, (uint8_t *) usartString, sizeof(usartString), 50 );
 }
 
 void calculateCapacity()
@@ -165,14 +197,20 @@ void loop( void )
     //ssd1306_PrintString("ЗАПУСК..", 2);
     calculateCapacity(); 
      
-    ssd1306_Fill(Black); 
-    printDisplayParameter(calculatedDC(adcResults[0], true), DISPLAY_VOLTAGE);
-    printDisplayParameter(calculatedDC(adcResults[1], false), DISPLAY_CURRENT); 
-    printDisplayParameter(calculatedCapacity / 3600, DISPLAY_CAPACITY); 
-    printDisplayParameter(100, DISPLAY_PERCENTS); 
-    
-   
+    ssd1306_Fill(Black);
+    actualVoltage = calculatedDC(adcResults[0], true);
+    actualCurrent = calculatedDC(adcResults[1], false);
+    actualCapacity = calculatedCapacity / 3600;
+    printDisplayParameter(actualVoltage, DISPLAY_VOLTAGE);
+    printDisplayParameter(actualCurrent, DISPLAY_CURRENT); 
+    printDisplayParameter(actualCapacity, DISPLAY_CAPACITY); 
+    printDisplayParameter(100, DISPLAY_PERCENTS);  
     ssd1306_UpdateScreen();
+
+    // We are waiting for the end of the packet transmission.
+    if (UART.gState != HAL_UART_STATE_READY ) return;
+    sendParametersToUsart(actualVoltage, actualCurrent, actualCapacity);
+
 }
 
 void HAL_SYSTICK_Callback( void )
