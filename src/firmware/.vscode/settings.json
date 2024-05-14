@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "compare": "c",
+        "string.h": "c",
+        "ssd1306_tests.h": "c"
+    }
+}
