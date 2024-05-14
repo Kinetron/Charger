@@ -26,6 +26,9 @@
 #define DIVISION_COEFFICIENTS_CURRENT 3.64
 #define MAX_QUANTITY_MEASUREMENTS 15
 
+#define MAX_VOLTAGE 14.0
+#define MIN_VOLTAGE 10.0
+
 extern IWDG_HandleTypeDef hiwdg;
 extern TIM_HandleTypeDef htim3;
 extern ADC_HandleTypeDef hadc1;
@@ -100,6 +103,27 @@ void toFloatStr(float data, char* str)
   sprintf(str, "%d.%02d", (uint32_t)data, (uint16_t)((data - (uint32_t)data) * 100.)); 
 }
 
+char * percentAnimation(float value)
+{
+    char *simvol = "";
+    bool maxPersents = false;
+    if((uint8_t)value == 100) maxPersents = true;
+
+    if(animationFlag)
+      {
+        simvol =  " % ";  
+        if(maxPersents) simvol = 0;
+      }
+      else
+      {
+        simvol = "% ";
+      }
+
+      animationFlag = !animationFlag;
+
+      return simvol;
+} 
+
 //Show on display the current or voltage
 void printDisplayParameter(float data, uint8_t paramType)
 {
@@ -127,26 +151,25 @@ void printDisplayParameter(float data, uint8_t paramType)
       sprintf(displayStr,"%d ", (uint8_t)data);
       ssd1306_SetCursor(85, 0);
       
-      if(animationFlag)
-      {
-        simvol = " % ";  
-      }
-      else
-      {
-        simvol = "% ";
-      }
-      animationFlag = !animationFlag;
+      simvol = percentAnimation(data);
     break; 
  
    default:
     break;
    }
   
-   ssd1306_PrintString(displayStr, 2);
+   if(simvol != 0)
+   {
+     ssd1306_PrintString(displayStr, 2);
+   }
+   else
+   {
+    ssd1306_PrintString("", 2);
+   }
+
    ssd1306_PrintString(simvol, 2);
 }
 
-char tmpStr[PARAM_STR_LEN];
 void sendParametersToUsart(float voltage, float current, float capacity)
 {
   uint8_t lastPos = 0;
@@ -182,6 +205,14 @@ void calculateCapacity()
    }
 }
 
+float calculatePercents(float voltage)
+{
+   float percents = (voltage - MIN_VOLTAGE) / ((MAX_VOLTAGE - MIN_VOLTAGE) / 100.0);
+   if((uint8_t)percents > 100) return 100.0;
+
+   return percents;
+}
+
 /**
  * \brief   It is performed periodically in the body of the main loop.
  *
@@ -204,7 +235,7 @@ void loop( void )
     printDisplayParameter(actualVoltage, DISPLAY_VOLTAGE);
     printDisplayParameter(actualCurrent, DISPLAY_CURRENT); 
     printDisplayParameter(actualCapacity, DISPLAY_CAPACITY); 
-    printDisplayParameter(100, DISPLAY_PERCENTS);  
+    printDisplayParameter(calculatePercents(actualVoltage), DISPLAY_PERCENTS);  
     ssd1306_UpdateScreen();
 
     // We are waiting for the end of the packet transmission.
