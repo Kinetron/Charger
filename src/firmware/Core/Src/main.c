@@ -103,6 +103,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim2);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4); 
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3); 
   /* USER CODE END 2 */
 
   /* Infinite loop */

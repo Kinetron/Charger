@@ -9,7 +9,7 @@
 #include "soft_timers.h"
 #include "stdio.h"
 
-#define ADC_NUMBER_OF_CHANNELS 9 //Use 9 channels to measure parameters.
+#define ADC_NUMBER_OF_CHANNELS 8 //Use 9 channels to measure parameters.
 #define LED_USER_PERIOD_MSEC  ( 500 )
 #define USART_STRING_SIZE 70
 #define UART huart1
@@ -256,6 +256,7 @@ void HAL_SYSTICK_Callback( void )
     }    
 }
 
+uint32_t tim_test = 0;
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
 {   
    if (htim->Instance == TIM2)
@@ -279,5 +280,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
 
          numberMeasurements = 0;
       }
+
+      uint32_t persent = (uint32_t)(adcData[0] / (0xFFF / 100));
+      uint32_t pwm = 10 * persent;    
+      TIM3->CCR3 = pwm;//tim_test;
+      TIM3->CCR4 =  pwm;//tim_test;
+
+      tim_test++;
+
+      if(tim_test > 0xFFFFF) tim_test = 0;
    }
 }
