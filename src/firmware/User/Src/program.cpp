@@ -8,6 +8,7 @@
 #include "fee.h"
 #include "soft_timers.h"
 #include "stdio.h"
+#include "ssd1306_fonts.h"
 
 #define ADC_NUMBER_OF_CHANNELS 8 //Use 9 channels to measure parameters.
 #define LED_USER_PERIOD_MSEC  ( 500 )
@@ -103,6 +104,11 @@ void toFloatStr(float data, char* str)
   sprintf(str, "%d.%02d", (uint32_t)data, (uint16_t)((data - (uint32_t)data) * 100.)); 
 }
 
+void toFloatStrShort(float data, char* str)
+{
+  sprintf(str, "%d.%d", (uint32_t)data, (uint16_t)((data - (uint32_t)data) * 10.)); 
+}
+
 char * percentAnimation(float value)
 {
     char *simvol = "";
@@ -125,31 +131,39 @@ char * percentAnimation(float value)
 } 
 
 //Show on display the current or voltage
-void printDisplayParameter(float data, uint8_t paramType)
+void printDisplayParameter(float data, uint8_t paramType, bool shortFormat)
 {
-   toFloatStr(data, displayStr);
+   if(shortFormat)
+   {
+      toFloatStrShort(data, displayStr);
+   }
+   else
+   {
+     toFloatStr(data, displayStr);
+   }
+   
 
-   char* simvol = " В";
+   char* simvol = "B";
 
    switch (paramType)
    {
     case DISPLAY_VOLTAGE: 
-      ssd1306_SetCursor(0, 18);
+      ssd1306_SetCursor(0, 45);
     break;
    
     case DISPLAY_CURRENT:
-      ssd1306_SetCursor(80, 18);
-      simvol = " A";
+      ssd1306_SetCursor(75, 45);
+      simvol = "A";
     break;
 
     case DISPLAY_CAPACITY: 
-      ssd1306_SetCursor(0, 0);
-      simvol = " Ah";
+      ssd1306_SetCursor(0, 18);
+      simvol = "Ah";
     break;
 
     case DISPLAY_PERCENTS:
       sprintf(displayStr,"%d ", (uint8_t)data);
-      ssd1306_SetCursor(85, 0);
+      ssd1306_SetCursor(85, 18);
       
       simvol = percentAnimation(data);
     break; 
@@ -160,14 +174,25 @@ void printDisplayParameter(float data, uint8_t paramType)
   
    if(simvol != 0)
    {
-     ssd1306_PrintString(displayStr, 2);
+       //For string with 3digits.
+      if((strlen(displayStr) < 4) && paramType != DISPLAY_PERCENTS)
+      {
+        ssd1306_MoveCursor(7, 0);
+      }    
+      
+      ssd1306_WriteString(displayStr, Font_11x18, White);
    }
    else
    {
-    ssd1306_PrintString("", 2);
+    //ssd1306_PrintString("", 2);
+    ssd1306_WriteString("", Font_11x18, White);
    }
+  
+   ssd1306_MoveCursor(0, 7);
+   ssd1306_WriteString(simvol, Font_7x10, White); 
+   
 
-   ssd1306_PrintString(simvol, 2);
+   ssd1306_SetContrast(200);
 }
 
 void sendParametersToUsart(float voltage, float current, float capacity)
@@ -226,16 +251,20 @@ void loop( void )
 
     //ssd1306_SetCursor(0,0);
     //ssd1306_PrintString("ЗАПУСК..", 2);
+    ssd1306_PrintString("Привет", 2);
+   ssd1306_UpdateScreen();
+      HAL_IWDG_Refresh(&hiwdg);
+    HAL_Delay(1000);
     calculateCapacity(); 
      
     ssd1306_Fill(Black);
     actualVoltage = calculatedDC(adcResults[0], true);
     actualCurrent = calculatedDC(adcResults[1], false);
     actualCapacity = calculatedCapacity / 3600;
-    printDisplayParameter(actualVoltage, DISPLAY_VOLTAGE);
-    printDisplayParameter(actualCurrent, DISPLAY_CURRENT); 
-    printDisplayParameter(actualCapacity, DISPLAY_CAPACITY); 
-    printDisplayParameter(calculatePercents(actualVoltage), DISPLAY_PERCENTS);  
+    printDisplayParameter(actualVoltage, DISPLAY_VOLTAGE, false);
+    printDisplayParameter(actualCurrent, DISPLAY_CURRENT, true); 
+    printDisplayParameter(actualCapacity, DISPLAY_CAPACITY, false); 
+    printDisplayParameter(calculatePercents(actualVoltage), DISPLAY_PERCENTS, false);  
     ssd1306_UpdateScreen();
 
     // We are waiting for the end of the packet transmission.

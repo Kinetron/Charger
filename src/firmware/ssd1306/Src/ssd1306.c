@@ -281,6 +281,11 @@ void ssd1306_SetCursor(uint8_t x, uint8_t y) {
     SSD1306.CurrentY = y;
 }
 
+void ssd1306_MoveCursor(uint8_t dx, uint8_t dy){
+    SSD1306.CurrentX = SSD1306.CurrentX + dx;
+    SSD1306.CurrentY = SSD1306.CurrentY + dy;
+}
+
 /* Draw line by Bresenhem's algorithm */
 void ssd1306_Line(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, SSD1306_COLOR color) {
     int32_t deltaX = abs(x2 - x1);
@@ -624,6 +629,7 @@ char ssd1306_PrintChar(char ch, uint8_t scale) {
     for (uint8_t col = 0; col < 6; col++) 
     {
         bits = _getFontAdd((char)ch, col);
+        if(bits == 0) continue;
 
         if(scale == 2)
         {
@@ -676,13 +682,15 @@ uint8_t _getFontAdd(uint8_t font, uint8_t row)
 {
 	font = font - '0' + 16;   //Translation of the character code from the ASCII table to a number according to the numbering of the array
 	
-    if (font <= 90) return additionalCharMap[font][row]; // for English letters and symbols
+    if (font <= 90) return 0; // for English letters and symbols
+
+    // use only cirilic char - -95. Table not content eng
 	else if (font >= 112 && font <= 159) 
     {						//cirilic
-		return additionalCharMap[font - 17][row];
+		return additionalCharMap[(font - 95) - 17][row];
 	} 
     else if (font >= 96 && font <= 111) 
     {
-		return additionalCharMap[font + 47][row];
+		return additionalCharMap[(font - 95) + 47][row];
 	}
 }
