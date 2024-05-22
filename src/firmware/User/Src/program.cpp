@@ -9,7 +9,7 @@
 #include "soft_timers.h"
 #include "stdio.h"
 #include "ssd1306_fonts.h"
-
+#include "eeprom.h"
 
 #define TEMP_SENSOR_VOLT_25   1.31f      // The voltage (in volts) on the sensor at a temperature of 25 °C.
 #define TEMP_SENSOR_SLOPE  0.0043f    // Voltage change (in volts) when the temperature changes by a degree.
@@ -87,7 +87,41 @@ void setup( void )
     }
     ssd1306_Init();
 
-   HAL_IWDG_Refresh(&hiwdg);
+    HAL_IWDG_Refresh(&hiwdg);
+
+     const int mem_size = 100;
+    uint8_t arr[mem_size];
+
+    uint8_t data = 0x01;
+    for(int i = 0; i < mem_size; i++)
+    {      
+      at24_WriteByte(data, &data, 1);
+      HAL_IWDG_Refresh(&hiwdg);
+      data++;
+    }
+
+
+    at24_ReadByte(0, arr, mem_size);
+    for(int i = 0; i < mem_size; i++)
+    {
+       HAL_IWDG_Refresh(&hiwdg);
+       sprintf(displayStr,"%d ", arr[i]);
+       ssd1306_SetCursor(0, 0);
+       ssd1306_WriteSpecialSimvolString(displayStr, SpecialCharacters_11x18, White); 
+       ssd1306_SetCursor(0, 20);
+       if(i % 2 == 0)
+       {
+          ssd1306_WriteSpecialSimvolString("1", SpecialCharacters_11x18, White);
+       }
+       else
+       {
+         ssd1306_WriteSpecialSimvolString("0", SpecialCharacters_11x18, White);
+       }
+       ssd1306_UpdateScreen();
+      
+       HAL_Delay(500);
+    }
+
 }
 
 float calculatedDC(uint32_t adcValue, bool paramType)
@@ -263,14 +297,16 @@ int contrast = 10;
 void loop( void )
 {
     HAL_Delay(1000);
-
     HAL_IWDG_Refresh(&hiwdg);
+    
+  
+    
 
     //ssd1306_SetCursor(0,0);
     //ssd1306_PrintString("ЗАПУСК..", 2);
     ssd1306_PrintString("Приветыы", 2);
-   ssd1306_UpdateScreen();
-      HAL_IWDG_Refresh(&hiwdg);
+    ssd1306_UpdateScreen();
+    HAL_IWDG_Refresh(&hiwdg);
     HAL_Delay(1000);
     calculateCapacity(); 
      
@@ -285,9 +321,7 @@ void loop( void )
 
     printDisplayParameter(actualCurrent, DISPLAY_CURRENT, true); 
     printDisplayParameter(actualCapacity, DISPLAY_CAPACITY, false); 
-    printDisplayParameter(calculatePercents(actualVoltage), DISPLAY_PERCENTS, false);
-
-   
+    printDisplayParameter(calculatePercents(actualVoltage), DISPLAY_PERCENTS, false); 
 
     ssd1306_UpdateScreen();
 

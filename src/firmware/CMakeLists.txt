@@ -41,6 +41,7 @@ add_executable(${PROJECT_NAME})
 # Подключаем необходимые библиотеки.
 add_subdirectory(ssd1306)
 add_subdirectory(Core)
+add_subdirectory(EEPROM)
 add_subdirectory(Flash)
 add_subdirectory(SoftTimers)
 add_subdirectory(User)
