@@ -89,17 +89,16 @@ void setup( void )
 
     HAL_IWDG_Refresh(&hiwdg);
 
-     const int mem_size = 100;
+    const int mem_size = 100;
     uint8_t arr[mem_size];
 
-    uint8_t data = 0x01;
+    uint8_t data = 0;
     for(int i = 0; i < mem_size; i++)
     {      
-      at24_WriteByte(data, &data, 1);
+      if(!at24_WriteByte(data, &data, 1)) return;
       HAL_IWDG_Refresh(&hiwdg);
       data++;
     }
-
 
     at24_ReadByte(0, arr, mem_size);
     for(int i = 0; i < mem_size; i++)
