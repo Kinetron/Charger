@@ -10,9 +10,12 @@
 #include "stdio.h"
 #include "ssd1306_fonts.h"
 
-#define ADC_NUMBER_OF_CHANNELS 8 //Use 9 channels to measure parameters.
+
+#define TEMP_SENSOR_VOLT_25   1.31f      // The voltage (in volts) on the sensor at a temperature of 25 °C.
+#define TEMP_SENSOR_SLOPE  0.0043f    // Voltage change (in volts) when the temperature changes by a degree.
+#define ADC_NUMBER_OF_CHANNELS 9 //Use 9 channels to measure parameters.
 #define LED_USER_PERIOD_MSEC  ( 500 )
-#define USART_STRING_SIZE 70
+#define USART_STRING_SIZE 100
 #define UART huart1
 #define ADC_REFERENCE_VOLTAGE 3.3
 #define ADC_MAX 0xFFF //Max adc value.
@@ -97,6 +100,15 @@ float calculatedDC(uint32_t adcValue, bool paramType)
    {
       return adcValue  * ADC_REFERENCE_VOLTAGE * DIVISION_COEFFICIENTS_CURRENT / ADC_MAX;
    }
+}
+
+float calculatedTemperature(uint32_t adcValue)
+{
+  //When heated, the voltage down.
+  float voltage = (float) adcValue / 4096 * ADC_REFERENCE_VOLTAGE;   //The voltage in volts on the sensor.
+  //For Calibrated
+  return voltage;
+  //return ((TEMP_SENSOR_VOLT_25 - voltage) / TEMP_SENSOR_SLOPE)  + 25;   // Temperature in degrees.
 }
 
 void toFloatStr(float data, char* str)
@@ -194,7 +206,7 @@ void printDisplayParameter(float data, uint8_t paramType, bool shortFormat)
    ssd1306_WriteSpecialSimvolString(simvol, SpecialCharacters_7x10, White);    
 }
 
-void sendParametersToUsart(float voltage, float current, float capacity)
+void sendParametersToUsart(float voltage, float current, float capacity, float temperature)
 {
   uint8_t lastPos = 0;
   
@@ -212,10 +224,15 @@ void sendParametersToUsart(float voltage, float current, float capacity)
   lastPos= strlen(usartString);
 
   toFloatStr(capacity, usartString + lastPos);
-  lastPos= strlen(usartString);;
+  lastPos= strlen(usartString);
 
-  strcpy(usartString + lastPos, " Ah\n");
-  
+  strcpy(usartString + lastPos, " Ah ");
+
+  lastPos= strlen(usartString);
+  toFloatStr(temperature, usartString + lastPos);
+  lastPos= strlen(usartString);
+  strcpy(usartString + lastPos, " t\n");
+
   HAL_IWDG_Refresh(&hiwdg);
   HAL_UART_Transmit( & UART, (uint8_t *) usartString, sizeof(usartString), 50 );
 }
@@ -261,15 +278,22 @@ void loop( void )
     actualVoltage = calculatedDC(adcResults[0], true);
     actualCurrent = calculatedDC(adcResults[1], false);
     actualCapacity = calculatedCapacity / 3600;
-    printDisplayParameter(actualVoltage, DISPLAY_VOLTAGE, false);
+    float actualTemperature = calculatedTemperature(adcData[8]);
+     
+    printDisplayParameter(actualTemperature, DISPLAY_VOLTAGE, false);
+    //printDisplayParameter(actualVoltage, DISPLAY_VOLTAGE, false);
+
     printDisplayParameter(actualCurrent, DISPLAY_CURRENT, true); 
     printDisplayParameter(actualCapacity, DISPLAY_CAPACITY, false); 
-    printDisplayParameter(calculatePercents(actualVoltage), DISPLAY_PERCENTS, false);  
+    printDisplayParameter(calculatePercents(actualVoltage), DISPLAY_PERCENTS, false);
+
+   
+
     ssd1306_UpdateScreen();
 
     // We are waiting for the end of the packet transmission.
     if (UART.gState != HAL_UART_STATE_READY ) return;
-    sendParametersToUsart(actualVoltage, actualCurrent, actualCapacity);
+    sendParametersToUsart(actualVoltage, actualCurrent, actualCapacity, actualTemperature);
    
     //ssd1306_SetContrast(contrast);
 
