@@ -261,6 +261,75 @@ char ssd1306_WriteChar(char ch, SSD1306_Font_t Font, SSD1306_COLOR color) {
     return ch;
 }
 
+/*
+ * Draw 1 char to the screen buffer
+ * ch       => char om weg te schrijven
+ * Font     => Font waarmee we gaan schrijven
+ * color    => Black or White
+ */
+char ssd1306_WriteSpecialChar(char ch, SSD1306_Font_t Font, SSD1306_COLOR color) {
+    uint32_t i, b, j;
+      // Check remaining space on current line
+    if (SSD1306_WIDTH < (SSD1306.CurrentX + Font.width) ||
+        SSD1306_HEIGHT < (SSD1306.CurrentY + Font.height))
+    {
+        // Not enough space on current line
+        return 0;
+    }    
+
+    uint8_t arrPos = 0; 
+    if(Font.width == 7 && Font.height == 10 )
+    {
+       arrPos = _getSpecialCharacters7x10_Pos(ch);
+    }
+    
+    if(Font.width == 11 && Font.height == 18 )
+    {
+       arrPos = ch - 32; //25 chars
+    }
+    
+    // Use the font to write
+    for(i = 0; i < Font.height; i++) {
+        b = Font.data[arrPos * Font.height + i];
+        for(j = 0; j < Font.width; j++) {
+            if((b << j) & 0x8000)  {
+                ssd1306_DrawPixel(SSD1306.CurrentX + j, (SSD1306.CurrentY + i), (SSD1306_COLOR) color);
+            } else {
+                ssd1306_DrawPixel(SSD1306.CurrentX + j, (SSD1306.CurrentY + i), (SSD1306_COLOR)!color);
+            }
+        }
+    }
+    
+    // The current space is now taken
+    SSD1306.CurrentX += Font.char_width ? Font.char_width[ch - 32] : Font.width;
+    
+    // Return written char for validation
+    return ch;
+}
+
+uint8_t _getSpecialCharacters7x10_Pos(char ch)
+{
+    switch (ch)
+    {
+         //sp
+        case 0x20: return 0;
+
+        //A
+        case 0x41: return 1;
+
+        //B
+        case 0x42: return 2;
+
+        //h
+        case 0x68: return 3;
+
+        //%
+        case 0x25: return 4;
+    
+    default: return 1;
+    }
+}
+
 /* Write full string to screenbuffer */
 char ssd1306_WriteString(char* str, SSD1306_Font_t Font, SSD1306_COLOR color) {
     while (*str) {
@@ -271,6 +340,19 @@ char ssd1306_WriteString(char* str, SSD1306_Font_t Font, SSD1306_COLOR color) {
         str++;
     }
     
+    // Everything ok
+    return *str;
+}
+
+char ssd1306_WriteSpecialSimvolString(char* str, SSD1306_Font_t Font, SSD1306_COLOR color) {
+    while (*str) {
+        if (ssd1306_WriteSpecialChar(*str, Font, color) != *str) {
+            // Char could not be written
+            return *str;
+        }
+        str++;
+    }
+ 
     // Everything ok
     return *str;
 }

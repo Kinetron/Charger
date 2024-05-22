@@ -157,7 +157,9 @@ void ssd1306_Fill(SSD1306_COLOR color);
 void ssd1306_UpdateScreen(void);
 void ssd1306_DrawPixel(uint8_t x, uint8_t y, SSD1306_COLOR color);
 char ssd1306_WriteChar(char ch, SSD1306_Font_t Font, SSD1306_COLOR color);
+char ssd1306_WriteSpecialChar(char ch, SSD1306_Font_t Font, SSD1306_COLOR color);
 char ssd1306_WriteString(char* str, SSD1306_Font_t Font, SSD1306_COLOR color);
+char ssd1306_WriteSpecialSimvolString(char* str, SSD1306_Font_t Font, SSD1306_COLOR color);
 void ssd1306_SetCursor(uint8_t x, uint8_t y);
 void ssd1306_MoveCursor(uint8_t dx, uint8_t dy);
 
@@ -174,6 +176,7 @@ void ssd1306_FillRectangle(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, SSD13
 char ssd1306_PrintString(char* str, uint8_t scale);
 char ssd1306_PrintChar(char ch, uint8_t scale);
 
+uint8_t _getSpecialCharacters7x10_Pos(char ch);
 void _spacesBetweenLetters(uint8_t lengthPx, uint8_t scale);
 int _stretch (int x);
 uint8_t _getFontAdd(uint8_t font, uint8_t row);

@@ -180,19 +180,18 @@ void printDisplayParameter(float data, uint8_t paramType, bool shortFormat)
         ssd1306_MoveCursor(7, 0);
       }    
       
-      ssd1306_WriteString(displayStr, Font_11x18, White);
+      //ssd1306_WriteString(displayStr, Font_11x18, White);
+      ssd1306_WriteSpecialSimvolString(displayStr, SpecialCharacters_11x18, White); 
    }
    else
    {
     //ssd1306_PrintString("", 2);
-    ssd1306_WriteString("", Font_11x18, White);
+    //ssd1306_WriteString("", Font_11x18, White);
+    ssd1306_WriteSpecialSimvolString(simvol, SpecialCharacters_11x18, White); 
    }
   
    ssd1306_MoveCursor(0, 7);
-   ssd1306_WriteString(simvol, Font_7x10, White); 
-   
-
-   ssd1306_SetContrast(200);
+   ssd1306_WriteSpecialSimvolString(simvol, SpecialCharacters_7x10, White);    
 }
 
 void sendParametersToUsart(float voltage, float current, float capacity)
@@ -243,6 +242,7 @@ float calculatePercents(float voltage)
  *
  */
 
+int contrast = 10;
 void loop( void )
 {
     HAL_Delay(1000);
@@ -251,7 +251,7 @@ void loop( void )
 
     //ssd1306_SetCursor(0,0);
     //ssd1306_PrintString("ЗАПУСК..", 2);
-    ssd1306_PrintString("Привет", 2);
+    ssd1306_PrintString("Приветыы", 2);
    ssd1306_UpdateScreen();
       HAL_IWDG_Refresh(&hiwdg);
     HAL_Delay(1000);
@@ -270,7 +270,13 @@ void loop( void )
     // We are waiting for the end of the packet transmission.
     if (UART.gState != HAL_UART_STATE_READY ) return;
     sendParametersToUsart(actualVoltage, actualCurrent, actualCapacity);
+   
+    //ssd1306_SetContrast(contrast);
 
+    //if(contrast < 0xff) {contrast+= 50;}
+    //else 
+    
+    contrast = 0;
 }
 
 void HAL_SYSTICK_Callback( void )
