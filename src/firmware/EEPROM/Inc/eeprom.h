@@ -16,7 +16,7 @@ extern I2C_HandleTypeDef hi2c1;
 //each, the 8K requires a 10-bit data word address for random word addressing. 
 
 // EEPROM ADDRESS (8bits)
-#define EEPROM_ADDR 0x57 << 1
+#define EEPROM_ADDR 0x50 << 1
 
 // Define the Page Size and number of pages 
 #define PAGE_SIZE 128     // in Bytes

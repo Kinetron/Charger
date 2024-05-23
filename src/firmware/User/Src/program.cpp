@@ -34,7 +34,6 @@
 #define MIN_VOLTAGE 10.0
 
 extern IWDG_HandleTypeDef hiwdg;
-extern TIM_HandleTypeDef htim3;
 extern ADC_HandleTypeDef hadc1;
 
 volatile uint32_t TimeTickMs = 0;
@@ -89,6 +88,7 @@ void setup( void )
 
     HAL_IWDG_Refresh(&hiwdg);
 
+    return;
     const int mem_size = 100;
     uint8_t arr[mem_size];
 
@@ -351,7 +351,7 @@ void HAL_SYSTICK_Callback( void )
 uint32_t tim_test = 0;
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
 {   
-   if (htim->Instance == TIM2)
+   if (htim->Instance == TIM3)
    {      
       if(numberMeasurements < MAX_QUANTITY_MEASUREMENTS)
       {
@@ -375,8 +375,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
 
       uint32_t persent = (uint32_t)(adcData[0] / (0xFFF / 100));
       uint32_t pwm = 10 * persent;    
-      TIM3->CCR3 = pwm;//tim_test;
-      TIM3->CCR4 =  pwm;//tim_test;
+      TIM2->CCR3 = pwm;//tim_test;
+      TIM2->CCR4 = 1000 - pwm;//tim_test;
 
       tim_test++;
 
