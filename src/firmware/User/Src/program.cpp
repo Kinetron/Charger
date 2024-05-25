@@ -87,6 +87,10 @@ void setup( void )
     ssd1306_Init();
 
     HAL_IWDG_Refresh(&hiwdg);
+  
+    ssd1306_SetCursor(0, 20); 
+    ssd1306_PrintString("Привет", 2);
+    ssd1306_UpdateScreen();
 
     return;
     const int mem_size = 100;
@@ -294,17 +298,7 @@ float calculatePercents(float voltage)
 
 int contrast = 10;
 void loop( void )
-{
-    HAL_Delay(1000);
-    HAL_IWDG_Refresh(&hiwdg);
-    
-  
-    
-
-    //ssd1306_SetCursor(0,0);
-    //ssd1306_PrintString("ЗАПУСК..", 2);
-    ssd1306_PrintString("Приветыы", 2);
-    ssd1306_UpdateScreen();
+{   
     HAL_IWDG_Refresh(&hiwdg);
     HAL_Delay(1000);
     calculateCapacity(); 
@@ -324,16 +318,11 @@ void loop( void )
 
     ssd1306_UpdateScreen();
 
+    HAL_IWDG_Refresh(&hiwdg); 
     // We are waiting for the end of the packet transmission.
     if (UART.gState != HAL_UART_STATE_READY ) return;
     sendParametersToUsart(actualVoltage, actualCurrent, actualCapacity, actualTemperature);
-   
-    //ssd1306_SetContrast(contrast);
-
-    //if(contrast < 0xff) {contrast+= 50;}
-    //else 
-    
-    contrast = 0;
+      
 }
 
 void HAL_SYSTICK_Callback( void )
