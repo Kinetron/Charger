@@ -105,7 +105,7 @@
 #define VECT_TAB_OFFSET         0x00000000U     /*!< Vector Table base offset field.
                                                      This value must be a multiple of 0x200. */
 #else
-#define VECT_TAB_BASE_ADDRESS   0x08002000U      /*!< Vector Table base address field.
+#define VECT_TAB_BASE_ADDRESS   0x08000000U      /*!< Vector Table base address field. For bootloader 0x08002000U
                                                      This value must be a multiple of 0x200. */
 #define VECT_TAB_OFFSET         0x00000000U     /*!< Vector Table base offset field.
                                                      This value must be a multiple of 0x200. */
