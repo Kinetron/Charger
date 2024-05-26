@@ -13,11 +13,11 @@
 
 #define TEMP_SENSOR_VOLT_25   1.31f      // The voltage (in volts) on the sensor at a temperature of 25 °C.
 #define TEMP_SENSOR_SLOPE  0.0043f    // Voltage change (in volts) when the temperature changes by a degree.
-#define ADC_NUMBER_OF_CHANNELS 9 //Use 9 channels to measure parameters.
+#define ADC_NUMBER_OF_CHANNELS 4 //Use 9 channels to measure parameters.
 #define LED_USER_PERIOD_MSEC  ( 500 )
 #define USART_STRING_SIZE 100
 #define UART huart1
-#define ADC_REFERENCE_VOLTAGE 3.3
+#define ADC_REFERENCE_VOLTAGE 33 //*10
 #define ADC_MAX 0xFFF //Max adc value.
 #define PARAM_STR_LEN 5
 
@@ -26,9 +26,10 @@
 #define DISPLAY_CAPACITY 2
 #define DISPLAY_PERCENTS 3
  
-#define DIVISION_COEFFICIENTS_VOLTAGE 4.55
+//100k +24k  5v in 0.97v 600adc 
+#define DIVISION_COEFFICIENTS_VOLTAGE 5.309//5.498 -- 5v 
 #define DIVISION_COEFFICIENTS_CURRENT 3.64
-#define MAX_QUANTITY_MEASUREMENTS 15
+#define MAX_QUANTITY_MEASUREMENTS 16
 
 #define MAX_VOLTAGE 14.0
 #define MIN_VOLTAGE 10.0
@@ -41,8 +42,8 @@ uint32_t oldTimeTickHSec = 0;
 
 uint32_t adcData[ADC_NUMBER_OF_CHANNELS]; //Measured adc values.
 
-uint32_t adcAvgBuff[2];
-float adcResults[2];
+uint32_t adcAvgBuff[ADC_NUMBER_OF_CHANNELS];
+uint32_t adcResults[ADC_NUMBER_OF_CHANNELS];
 uint8_t numberMeasurements = 0;
 float calculatedCapacity;
 
@@ -131,11 +132,11 @@ float calculatedDC(uint32_t adcValue, bool paramType)
 {
    if(paramType)
    {
-      return adcValue  * ADC_REFERENCE_VOLTAGE * DIVISION_COEFFICIENTS_VOLTAGE / ADC_MAX;
+       return  adcValue * ADC_REFERENCE_VOLTAGE * DIVISION_COEFFICIENTS_VOLTAGE / 40960;
    }
    else
    {
-      return adcValue  * ADC_REFERENCE_VOLTAGE * DIVISION_COEFFICIENTS_CURRENT / ADC_MAX;
+      return adcValue *  ADC_REFERENCE_VOLTAGE / 4096;
    }
 }
 
@@ -243,12 +244,17 @@ void printDisplayParameter(float data, uint8_t paramType, bool shortFormat)
    ssd1306_WriteSpecialSimvolString(simvol, SpecialCharacters_7x10, White);    
 }
 
-void sendParametersToUsart(float voltage, float current, float capacity, float temperature)
+void sendParametersToUsart(uint32_t rawAdc, float voltage, float current, float capacity, float temperature)
 {
   uint8_t lastPos = 0;
   
   usartString[0] = '\0';
-  toFloatStr(voltage, usartString);
+  sprintf(usartString, "%d.%02d", rawAdc); 
+  lastPos = strlen(usartString);
+  strcpy(usartString + lastPos, " ");
+  lastPos = strlen(usartString);
+
+  toFloatStr(voltage, usartString + lastPos);
   lastPos = strlen(usartString);
 
   strcpy(usartString + lastPos, " V ");
@@ -279,7 +285,7 @@ void calculateCapacity()
    if(secondTickHandler)
    {
      secondTimerHandler = false;
-     calculatedCapacity+= calculatedDC(adcResults[1], false);
+     calculatedCapacity+= calculatedDC(adcResults[0], false);
    }
 }
 
@@ -304,13 +310,13 @@ void loop( void )
     calculateCapacity(); 
      
     ssd1306_Fill(Black);
-    actualVoltage = calculatedDC(adcResults[0], true);
-    actualCurrent = calculatedDC(adcResults[1], false);
+    actualVoltage = calculatedDC(adcResults[1], true);
+    actualCurrent = calculatedDC(DIVISION_COEFFICIENTS_VOLTAGE * ADC_REFERENCE_VOLTAGE, false);
     actualCapacity = calculatedCapacity / 3600;
-    float actualTemperature = calculatedTemperature(adcData[8]);
+    float actualTemperature = calculatedTemperature(adcData[3]);
      
-    printDisplayParameter(actualTemperature, DISPLAY_VOLTAGE, false);
-    //printDisplayParameter(actualVoltage, DISPLAY_VOLTAGE, false);
+    //printDisplayParameter(actualTemperature, DISPLAY_VOLTAGE, false);
+    printDisplayParameter(actualVoltage, DISPLAY_VOLTAGE, false);
 
     printDisplayParameter(actualCurrent, DISPLAY_CURRENT, true); 
     printDisplayParameter(actualCapacity, DISPLAY_CAPACITY, false); 
@@ -321,7 +327,7 @@ void loop( void )
     HAL_IWDG_Refresh(&hiwdg); 
     // We are waiting for the end of the packet transmission.
     if (UART.gState != HAL_UART_STATE_READY ) return;
-    sendParametersToUsart(actualVoltage, actualCurrent, actualCapacity, actualTemperature);
+    sendParametersToUsart(adcResults[1] ,actualVoltage, actualCurrent, actualCapacity, actualTemperature);
       
 }
 
@@ -344,7 +350,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
    {      
       if(numberMeasurements < MAX_QUANTITY_MEASUREMENTS)
       {
-         for(uint8_t i = 0; i < 2; i++)
+         for(uint8_t i = 0; i < ADC_NUMBER_OF_CHANNELS; i++)
          {
            adcAvgBuff[i]+= adcData[i]; 
          }
@@ -353,7 +359,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
       }
       else
       {
-        for(uint8_t i = 0; i < 2; i++)
+        for(uint8_t i = 0; i < ADC_NUMBER_OF_CHANNELS; i++)
          {
            adcResults[i]= adcAvgBuff[i] / numberMeasurements; 
            adcAvgBuff[i] = 0;
