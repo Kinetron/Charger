@@ -63,6 +63,11 @@ float actualVoltage;
 float actualCurrent;
 float actualCapacity;
 
+uint32_t period = 0;
+uint32_t pulseWidth = 0;
+
+extern TIM_HandleTypeDef htim2;
+
 /**
  * \brief  Performs initialization. 
  *
@@ -307,9 +312,36 @@ void loop( void )
 {   
     HAL_IWDG_Refresh(&hiwdg);
     HAL_Delay(1000);
-    calculateCapacity(); 
-     
+    //calculateCapacity(); 
+    HAL_IWDG_Refresh(&hiwdg);
     ssd1306_Fill(Black);
+//%d.%02d
+   ssd1306_SetCursor(0, 20);
+   float fperiod = 0;
+   if(period > 0) fperiod = 1000000000 / period;
+    
+   sprintf(displayStr, "%d", (uint32_t)fperiod); 
+ 
+   ssd1306_WriteSpecialSimvolString(displayStr, SpecialCharacters_11x18, White);
+   ssd1306_UpdateScreen();
+
+    ssd1306_SetCursor(0, 0);
+    sprintf(displayStr, "%d", period);  //period
+    ssd1306_WriteSpecialSimvolString(displayStr, SpecialCharacters_11x18, White);
+    ssd1306_UpdateScreen();
+ 
+    ssd1306_SetCursor(0, 40);
+    sprintf(displayStr, "%d", pulseWidth); 
+    ssd1306_WriteSpecialSimvolString(displayStr, SpecialCharacters_11x18, White);
+    ssd1306_UpdateScreen();
+
+
+
+   return;
+//uint32_t period = 0;
+//uint32_t pulseWidth = 0; 
+
+
     actualVoltage = calculatedDC(adcResults[1], true);
     actualCurrent = calculatedDC(DIVISION_COEFFICIENTS_VOLTAGE * ADC_REFERENCE_VOLTAGE, false);
     actualCapacity = calculatedCapacity / 3600;
@@ -341,6 +373,21 @@ void HAL_SYSTICK_Callback( void )
         secondTimerHandler = true;
         lastCurrent = adcResults[1];        
     }    
+}
+
+
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
+{
+    if (htim->Instance == TIM2)
+    {
+        if(htim->Channel == HAL_TIM_ACTIVE_CHANNEL_3)
+        {
+            TIM2->CNT = 0;
+        
+            period = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_3);
+            pulseWidth = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_4);
+        }
+    }
 }
 
 uint32_t tim_test = 0;

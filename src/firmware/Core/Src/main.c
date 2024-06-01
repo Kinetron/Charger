@@ -102,8 +102,11 @@ int main(void)
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim3);
-  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_4); 
-  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3); 
+  //HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_4); 
+  //HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3); 
+
+  HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_3);
+  HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_4);
   /* USER CODE END 2 */
 
   /* Infinite loop */
