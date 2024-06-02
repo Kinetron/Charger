@@ -97,7 +97,7 @@ void setup( void )
     HAL_IWDG_Refresh(&hiwdg);
   
     ssd1306_SetCursor(0, 20); 
-    ssd1306_PrintString("Прив ет", 2);
+    ssd1306_PrintString("Пр ивет", 2);
     ssd1306_UpdateScreen();
 
     return;
@@ -251,8 +251,23 @@ void printDisplayParameter(float data, uint8_t paramType, bool shortFormat)
    ssd1306_WriteSpecialSimvolString(simvol, SpecialCharacters_7x10, White);    
 }
 
+void sendFreqToUsart(double frequency)
+{
+  sprintf(usartString, "%10.7lf\r\n", frequency);
+
+  HAL_IWDG_Refresh(&hiwdg);
+  HAL_UART_Transmit( & UART, (uint8_t *) usartString, sizeof(usartString), 50 );
+}
+
 void sendParametersToUsart(uint32_t rawAdc, float voltage, float current, float capacity, float temperature)
 {
+     strcpy(usartString, "t");
+
+  HAL_IWDG_Refresh(&hiwdg);
+  HAL_UART_Transmit( & UART, (uint8_t *) usartString, sizeof(usartString), 50 );
+
+  return;
+
   uint8_t lastPos = 0;
   
   usartString[0] = '\0';
@@ -328,8 +343,8 @@ void loop( void )
     
     //Test ~150 hz  T = 6609, 6532 
    //sprintf(displayStr, "%d", fperiod); 
-   double mperiod = (float)10000000 / fullPeriod;
-   sprintf(displayStr, "%10.7lf", mperiod);
+   double frequency = (double)10000000 / ((double)fullPeriod/8);
+   sprintf(displayStr, "%10.7lf", frequency);
  
    ssd1306_WriteSpecialSimvolString(displayStr, SpecialCharacters_11x18, White);
    ssd1306_UpdateScreen();
@@ -354,7 +369,8 @@ void loop( void )
     HAL_IWDG_Refresh(&hiwdg); 
     // We are waiting for the end of the packet transmission.
     if (UART.gState != HAL_UART_STATE_READY ) return;
-    sendParametersToUsart(adcResults[1] ,actualVoltage, actualCurrent, actualCapacity, 1.23);
+    sendFreqToUsart(frequency);
+    //sendParametersToUsart(adcResults[1] ,actualVoltage, actualCurrent, actualCapacity, 1.23);
 
    return;
 //uint32_t period = 0;

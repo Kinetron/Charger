@@ -24,7 +24,7 @@
 
 /* USER CODE END 0 */
 #define BOUD_RATE 9600
-#define USART_CLOCK 70000000 //PCL1
+#define USART_BUS_CLOCK 70000000 //PCL1
 
 UART_HandleTypeDef huart1;
 DMA_HandleTypeDef hdma_usart1_rx;
@@ -41,7 +41,25 @@ void MX_USART1_UART_Init(void)
   /* USER CODE BEGIN USART1_Init 1 */
 
   /* USER CODE END USART1_Init 1 */
-  USART1 -> BRR = (uint16_t)(USART_CLOCK / BOUD_RATE)/16;
+  //Div = f(72 000 000)/9600*16;
+/*
+To program USARTDIV = 0d25.62
+For 72mhz = 455.73
+
+This leads to:
+DIV_Fraction = 16*0d0.62 = 0d9.92
+The nearest real number is 0d10 = 0xA
+
+DIV_Fraction = 16* 0d0.73 = 0d11.68
+The nearest real number is 0d12 = 0xC
+
+DIV_Mantissa = mantissa (0d25.620) = 0d25 = 0x19
+DIV_Mantissa = mantissa (0d455.73) = 0d455 = 0x1C7
+
+Then, USART_BRR = 0x19A hence USARTDIV = 0d25.625
+Then, USART_BRR = 0x1C7C hence USARTDIV = 0d455.73
+*/
+
   huart1.Instance = USART1;
   huart1.Init.BaudRate = BOUD_RATE;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
@@ -50,12 +68,12 @@ void MX_USART1_UART_Init(void)
   huart1.Init.Mode = UART_MODE_TX_RX;
   huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
   huart1.Init.OverSampling = UART_OVERSAMPLING_16;
- 
-
+  huart1.Instance->BRR =  USART_BUS_CLOCK / BOUD_RATE;
   if (HAL_UART_Init(&huart1) != HAL_OK)
   {
     Error_Handler();
   }
+
   /* USER CODE BEGIN USART1_Init 2 */
 
   /* USER CODE END USART1_Init 2 */
