@@ -54,7 +54,7 @@ char PassWord_W[10] = {"ABC123xyz"};
 char PassWord_R[9];
 bool logoSwith = false;
 
-char displayStr[30]; //To display data on the screen.
+char displayStr[300]; //To display data on the screen.
 bool animationFlag = false; //To flash the animation on the screen
 
 char usartString[USART_STRING_SIZE]; //The string that will be sent via usart.
@@ -65,6 +65,8 @@ float actualCapacity;
 
 uint32_t period = 0;
 uint32_t pulseWidth = 0;
+uint32_t tim2InterruptsCounter = 0;
+uint32_t tim2InterruptsCurrent = 0;
 
 extern TIM_HandleTypeDef htim2;
 
@@ -95,7 +97,7 @@ void setup( void )
     HAL_IWDG_Refresh(&hiwdg);
   
     ssd1306_SetCursor(0, 20); 
-    ssd1306_PrintString("Привет", 2);
+    ssd1306_PrintString("Прив ет", 2);
     ssd1306_UpdateScreen();
 
     return;
@@ -315,27 +317,44 @@ void loop( void )
     //calculateCapacity(); 
     HAL_IWDG_Refresh(&hiwdg);
     ssd1306_Fill(Black);
-//%d.%02d
+
    ssd1306_SetCursor(0, 20);
-   float fperiod = 0;
-   if(period > 0) fperiod = 1000000000 / period;
+   
+   uint32_t fullPeriod = 0xFFFF * tim2InterruptsCurrent + period;
+
+
+   uint32_t fperiod = 0;
+   if(period > 0) fperiod = 100000000000 / fullPeriod;
     
-   sprintf(displayStr, "%d", (uint32_t)fperiod); 
+    //Test ~150 hz  T = 6609, 6532 
+   //sprintf(displayStr, "%d", fperiod); 
+   double mperiod = (float)10000000 / fullPeriod;
+   sprintf(displayStr, "%10.7lf", mperiod);
  
    ssd1306_WriteSpecialSimvolString(displayStr, SpecialCharacters_11x18, White);
    ssd1306_UpdateScreen();
 
-    ssd1306_SetCursor(0, 0);
-    sprintf(displayStr, "%d", period);  //period
+    ssd1306_SetCursor(0, 40);
+    sprintf(displayStr, "%d", fullPeriod);  //period
+    ssd1306_WriteSpecialSimvolString(displayStr, SpecialCharacters_11x18, White);
+    ssd1306_UpdateScreen();
+
+       ssd1306_SetCursor(0, 0);
+    sprintf(displayStr, "%d", tim2InterruptsCurrent); // bad param
     ssd1306_WriteSpecialSimvolString(displayStr, SpecialCharacters_11x18, White);
     ssd1306_UpdateScreen();
  
+ /*
     ssd1306_SetCursor(0, 40);
-    sprintf(displayStr, "%d", pulseWidth); 
+    sprintf(displayStr, "%d", pulseWidth); // bad param
     ssd1306_WriteSpecialSimvolString(displayStr, SpecialCharacters_11x18, White);
     ssd1306_UpdateScreen();
-
-
+*/
+   
+    HAL_IWDG_Refresh(&hiwdg); 
+    // We are waiting for the end of the packet transmission.
+    if (UART.gState != HAL_UART_STATE_READY ) return;
+    sendParametersToUsart(adcResults[1] ,actualVoltage, actualCurrent, actualCapacity, 1.23);
 
    return;
 //uint32_t period = 0;
@@ -383,6 +402,8 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
         if(htim->Channel == HAL_TIM_ACTIVE_CHANNEL_3)
         {
             TIM2->CNT = 0;
+            tim2InterruptsCurrent = tim2InterruptsCounter;
+            tim2InterruptsCounter = 0;
         
             period = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_3);
             pulseWidth = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_4);
@@ -393,7 +414,13 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 uint32_t tim_test = 0;
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
 {   
-   if (htim->Instance == TIM3)
+ if (htim->Instance == TIM2)
+ {  
+    tim2InterruptsCounter ++;   
+ }
+ return;
+ 
+ if (htim->Instance == TIM3)
    {      
       if(numberMeasurements < MAX_QUANTITY_MEASUREMENTS)
       {

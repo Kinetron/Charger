@@ -23,6 +23,8 @@
 /* USER CODE BEGIN 0 */
 
 /* USER CODE END 0 */
+#define BOUD_RATE 9600
+#define USART_CLOCK 70000000 //PCL1
 
 UART_HandleTypeDef huart1;
 DMA_HandleTypeDef hdma_usart1_rx;
@@ -39,14 +41,17 @@ void MX_USART1_UART_Init(void)
   /* USER CODE BEGIN USART1_Init 1 */
 
   /* USER CODE END USART1_Init 1 */
+  USART1 -> BRR = (uint16_t)(USART_CLOCK / BOUD_RATE)/16;
   huart1.Instance = USART1;
-  huart1.Init.BaudRate = 9600;
+  huart1.Init.BaudRate = BOUD_RATE;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;
   huart1.Init.Mode = UART_MODE_TX_RX;
   huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
   huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+ 
+
   if (HAL_UART_Init(&huart1) != HAL_OK)
   {
     Error_Handler();
@@ -98,7 +103,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     {
       Error_Handler();
     }
-
+  
     __HAL_LINKDMA(uartHandle,hdmarx,hdma_usart1_rx);
 
   /* USER CODE BEGIN USART1_MspInit 1 */
