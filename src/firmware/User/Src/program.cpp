@@ -85,7 +85,7 @@ void init( void )
  */
 void setup( void )
 {
-    HAL_ADC_Start_DMA(&hadc1, adcData, ADC_NUMBER_OF_CHANNELS); // start adc in DMA mode
+    //HAL_ADC_Start_DMA(&hadc1, adcData, ADC_NUMBER_OF_CHANNELS); // start adc in DMA mode
 
     // Setting the default state.  
     if ( HAL_GPIO_ReadPin( USER_LED_GPIO_Port, USER_LED_Pin ) == GPIO_PIN_SET )
@@ -97,7 +97,7 @@ void setup( void )
     HAL_IWDG_Refresh(&hiwdg);
   
     ssd1306_SetCursor(0, 20); 
-    ssd1306_PrintString("Пр ивет", 2);
+    ssd1306_PrintString("Привет", 2);
     ssd1306_UpdateScreen();
 
     return;
@@ -336,14 +336,18 @@ void loop( void )
    ssd1306_SetCursor(0, 20);
    
    uint32_t fullPeriod = 0xFFFF * tim2InterruptsCurrent + period;
+   
+   /*
+     Use quartz generator 119.6063 Hz
+     The quartz resonator has an incorrect frequency. Is not 10 1000.
+     Now TIM2 count 35mhz (10*3.5)
+     Check errors 59.8042 / 17.0867 = 3,500043893788736;
+   */
+   //double frequency = ((double)35000000 / (((double)fullPeriod) / 8)) - 17.0867; //error quarth 10mhz
+   //double frequency = ((double)35000000 / (double)fullPeriod) - 59.8042;//; //error clock tim2 35mhz
 
-
-   uint32_t fperiod = 0;
-   if(period > 0) fperiod = 100000000000 / fullPeriod;
-    
-    //Test ~150 hz  T = 6609, 6532 
-   //sprintf(displayStr, "%d", fperiod); 
-   double frequency = (double)10000000 / ((double)fullPeriod/8);
+   double frequency = ((double)35000000 / ((double)fullPeriod / 2)) - (59.7883 + 0.0318);//; //error clock tim2 35mhz
+   //Bad double frequency = ((double)70000000 / ((double)fullPeriod / 2)) - 59.7883;//; //error clock tim2 35mhz
    sprintf(displayStr, "%10.7lf", frequency);
  
    ssd1306_WriteSpecialSimvolString(displayStr, SpecialCharacters_11x18, White);
@@ -354,7 +358,7 @@ void loop( void )
     ssd1306_WriteSpecialSimvolString(displayStr, SpecialCharacters_11x18, White);
     ssd1306_UpdateScreen();
 
-       ssd1306_SetCursor(0, 0);
+    ssd1306_SetCursor(0, 0);
     sprintf(displayStr, "%d", tim2InterruptsCurrent); // bad param
     ssd1306_WriteSpecialSimvolString(displayStr, SpecialCharacters_11x18, White);
     ssd1306_UpdateScreen();
@@ -401,12 +405,13 @@ void loop( void )
 void HAL_SYSTICK_Callback( void )
 {
     TimeTickMs++;
-
     if (TimeTickMs - oldTimeTickHSec > 1000)
     {
         oldTimeTickHSec = TimeTickMs;
         secondTimerHandler = true;
         lastCurrent = adcResults[1];        
+
+        
     }    
 }
 
@@ -438,6 +443,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
  
  if (htim->Instance == TIM3)
    {      
+      HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+
+      return;
+      
       if(numberMeasurements < MAX_QUANTITY_MEASUREMENTS)
       {
          for(uint8_t i = 0; i < ADC_NUMBER_OF_CHANNELS; i++)

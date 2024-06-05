@@ -95,19 +95,20 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_TIM2_Init();
-  MX_TIM3_Init();
+ // MX_TIM3_Init();
   MX_I2C1_Init();
   MX_IWDG_Init();
   MX_USART1_UART_Init();
-  MX_ADC1_Init();
+  //MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_Base_Start_IT(&htim3);
+  //HAL_TIM_Base_Start_IT(&htim3);
+  HAL_TIM_Base_Start_IT(&htim2);
   //HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_4); 
   //HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3); 
 
   HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_3);
   HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_4);
-  HAL_TIM_Base_Start_IT(&htim2);
+  
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -169,6 +170,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+HAL_RCC_MCOConfig(RCC_MCO, RCC_MCO1SOURCE_HSE, RCC_MCODIV_1);
 }
 
 /* USER CODE BEGIN 4 */
