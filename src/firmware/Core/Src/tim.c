@@ -43,7 +43,7 @@ void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 2;
+  htim2.Init.Prescaler = 1;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.Period = 65535;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -70,7 +70,7 @@ void MX_TIM2_Init(void)
   sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
   sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
   sConfigIC.ICFilter = 0;
-  sConfigIC.ICPrescaler = TIM_ICPSC_DIV2;
+  sConfigIC.ICPrescaler = TIM_ICPSC_DIV8;
   if (HAL_TIM_IC_ConfigChannel(&htim2, &sConfigIC, TIM_CHANNEL_3) != HAL_OK)
   {
     Error_Handler();
