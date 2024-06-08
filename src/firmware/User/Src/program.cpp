@@ -346,7 +346,7 @@ void loop( void )
    //double frequency = ((double)35000000 / (((double)fullPeriod) / 8)) - 17.0867; //error quarth 10mhz
    //double frequency = ((double)35000000 / (double)fullPeriod) - 59.8042;//; //error clock tim2 35mhz
 
-   double frequency = ((double)70000000 / ((double)fullPeriod / 8));// - (59.7883 + 0.0318);//; //error clock tim2 35mhz
+   double frequency = ((double)70000000 / ((double)fullPeriod / 8 * 2)) - 0.0037;// - (59.7883 + 0.0318);//; //error clock tim2 35mhz
    //Bad double frequency = ((double)70000000 / ((double)fullPeriod / 2)) - 59.7883;//; //error clock tim2 35mhz
    sprintf(displayStr, "%10.7lf", frequency);
  
@@ -427,7 +427,6 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
             tim2InterruptsCounter = 0;
         
             period = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_3);
-            pulseWidth = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_4);
         }
     }
 }
