@@ -13,6 +13,5 @@ target_sources(${PROJECT_NAME} PRIVATE
     Src/i2c.c
     Src/usart.c
     Src/dma.c
-    Src/adc.c
     Src/main.c
 )

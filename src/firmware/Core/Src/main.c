@@ -18,14 +18,13 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "adc.h"
 #include "dma.h"
 #include "i2c.h"
 #include "iwdg.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
-#include "fee.h"
+#include "ModbusRTU_Slave.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -108,6 +107,7 @@ int main(void)
 
   HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_3);
  // HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_4);
+  HAL_UART_Receive_IT(&huart1 , &uartRxData , 1);
   
   /* USER CODE END 2 */
 
@@ -116,7 +116,7 @@ int main(void)
   setup();
 
   while (1)
-  {
+  {    
     loop();
     /* USER CODE END WHILE */
 

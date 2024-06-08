@@ -3,5 +3,5 @@
 target_include_directories(${PROJECT_NAME} PRIVATE Inc )
 
 target_sources(${PROJECT_NAME} PRIVATE
-Src/soft_timers.c
+    Src/ModbusRTU_Slave.c
 )

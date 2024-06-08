@@ -42,8 +42,7 @@ add_executable(${PROJECT_NAME})
 add_subdirectory(ssd1306)
 add_subdirectory(Core)
 add_subdirectory(EEPROM)
-add_subdirectory(Flash)
-add_subdirectory(SoftTimers)
+add_subdirectory(modbus)
 add_subdirectory(User)
 
 target_link_libraries(${PROJECT_NAME}
