@@ -122,7 +122,17 @@ void uartTimer(void)
 
 void sendMessage(char *msg, uint8_t len)
 {
+	HAL_GPIO_WritePin(RS485_TX_EN_PORT, RS485_TX_EN_PIN, GPIO_PIN_SET);
 	HAL_UART_Transmit_IT(&huart1, (uint8_t *)msg, len);
+}
+
+/*Transmit data interrupt*/
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+  if (huart->Instance == USART1)
+  {
+	HAL_GPIO_WritePin(RS485_TX_EN_PORT, RS485_TX_EN_PIN, GPIO_PIN_RESET);
+  }
 }
 
 

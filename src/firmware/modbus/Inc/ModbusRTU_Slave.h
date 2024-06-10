@@ -18,6 +18,10 @@ _BEGIN_STD_C
 #define NUMBER_OF_COIL 30
 #define BUFFERSIZE (NUMBER_OF_REGISTER * 2 + 5)
 
+//For switch rx/tx mode. PB14
+#define RS485_TX_EN_PIN GPIO_PIN_14
+#define RS485_TX_EN_PORT GPIOB
+
 enum
 {
 	ReadCoil = 0x01,

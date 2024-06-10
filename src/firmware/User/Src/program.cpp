@@ -71,56 +71,14 @@ void init( void )
  */
 void setup( void )
 {
-    //HAL_ADC_Start_DMA(&hadc1, adcData, ADC_NUMBER_OF_CHANNELS); // start adc in DMA mode
-
     // Setting the default state.  
     if ( HAL_GPIO_ReadPin( USER_LED_GPIO_Port, USER_LED_Pin ) == GPIO_PIN_SET )
     {
         HAL_GPIO_WritePin( USER_LED_GPIO_Port, USER_LED_Pin, GPIO_PIN_RESET );
     }
+
     ssd1306_Init();
-
     HAL_IWDG_Refresh(&hiwdg);
-  
-    for(int i = 0; i < NUMBER_OF_REGISTER; i++ )
-    {
-         ModbusRegister[i] = i;
-    }
-   
-    return;
-    /*
-    const int mem_size = 100;
-    uint8_t arr[mem_size];
-
-    uint8_t data = 0;
-    for(int i = 0; i < mem_size; i++)
-    {      
-      if(!at24_WriteByte(data, &data, 1)) return;
-      HAL_IWDG_Refresh(&hiwdg);
-      data++;
-    }
-
-    at24_ReadByte(0, arr, mem_size);
-    for(int i = 0; i < mem_size; i++)
-    {
-       HAL_IWDG_Refresh(&hiwdg);
-       sprintf(displayStr,"%d ", arr[i]);
-       ssd1306_SetCursor(0, 0);
-       ssd1306_WriteSpecialSimvolString(displayStr, SpecialCharacters_11x18, White); 
-       ssd1306_SetCursor(0, 20);
-       if(i % 2 == 0)
-       {
-          ssd1306_WriteSpecialSimvolString("1", SpecialCharacters_11x18, White);
-       }
-       else
-       {
-         ssd1306_WriteSpecialSimvolString("0", SpecialCharacters_11x18, White);
-       }
-       ssd1306_UpdateScreen();
-      
-       HAL_Delay(500);
-    }
-*/
 }
 
 /**
@@ -135,25 +93,30 @@ void loop( void )
     if(measuredPeriodReady)
     {
        fullPeriod = 0xFFFF * tim2InterruptsCurrent + period;
-       measuredPeriodReady = false;    
-    }  
+       measuredPeriodReady = false; 
+
+      resultFrequency = 0;
+
+      if(fullPeriod > 0xFFFF)
+      {         
+        resultFrequency = ((float)70000000 / ((float)fullPeriod / 8 * 2));// - 0.0037;// - (59.7883 + 0.0318);//; //error clock tim2 35mhz 
+        memcpy(ModbusRegister, &resultFrequency, sizeof(float)); //Convert to array.
+      }   
+    }   
 
     //Show on display.
     if(secondTimerHandler == true)
     {
       HAL_IWDG_Refresh(&hiwdg);    
 
-      ssd1306_Fill(Black);
-      ssd1306_SetCursor(0, 20);
-
-      resultFrequency = 151.25111112;//0;
-
-      if(fullPeriod > 100)
-      {         
-        resultFrequency = ((float)70000000 / ((float)fullPeriod / 8 * 2)) - 0.0037;// - (59.7883 + 0.0318);//; //error clock tim2 35mhz 
+      if(fullPeriod < 0xFFFF)
+      {
+         memcpy(ModbusRegister, &resultFrequency, sizeof(float)); //Convert to array.
       }
 
-      memcpy(ModbusRegister, &resultFrequency, sizeof(float)); //Convert to array.      
+      ssd1306_Fill(Black);
+      ssd1306_SetCursor(0, 20);  
+            
       sprintf(displayStr, "%10.7lf", resultFrequency);
  
       ssd1306_WriteSpecialSimvolString(displayStr, SpecialCharacters_11x18, White);
@@ -169,10 +132,12 @@ void loop( void )
       ssd1306_WriteSpecialSimvolString(displayStr, SpecialCharacters_11x18, White);
       ssd1306_UpdateScreen();
     
-      HAL_IWDG_Refresh(&hiwdg); 
-
+      HAL_IWDG_Refresh(&hiwdg);
+      
       fullPeriod = 0; //Clear value.
-      secondTimerHandler = false;
+      tim2InterruptsCurrent = 0;
+      resultFrequency = 0;
+      secondTimerHandler = false;      
     }
 
     return;
