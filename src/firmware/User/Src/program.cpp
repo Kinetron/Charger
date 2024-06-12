@@ -10,28 +10,8 @@
 #include "eeprom.h"
 #include "ModbusRTU_Slave.h"
 
-#define TEMP_SENSOR_VOLT_25   1.31f      // The voltage (in volts) on the sensor at a temperature of 25 °C.
-#define TEMP_SENSOR_SLOPE  0.0043f    // Voltage change (in volts) when the temperature changes by a degree.
-#define ADC_NUMBER_OF_CHANNELS 4 //Use 9 channels to measure parameters.
-#define LED_USER_PERIOD_MSEC  ( 500 )
-#define USART_STRING_SIZE 100
-#define UART huart1
-#define ADC_REFERENCE_VOLTAGE 33 //*10
-#define ADC_MAX 0xFFF //Max adc value.
-#define PARAM_STR_LEN 5
-
-#define DISPLAY_VOLTAGE 0
-#define DISPLAY_CURRENT 1
-#define DISPLAY_CAPACITY 2
-#define DISPLAY_PERCENTS 3
- 
-//100k +24k  5v in 0.97v 600adc 
-#define DIVISION_COEFFICIENTS_VOLTAGE 5.309//5.498 -- 5v 
-#define DIVISION_COEFFICIENTS_CURRENT 3.64
-#define MAX_QUANTITY_MEASUREMENTS 16
-
-#define MAX_VOLTAGE 14.0
-#define MIN_VOLTAGE 10.0
+#define NUMBER_OF_MEASUREMENTS 15
+#define MAX_DELTA 150
 
 extern IWDG_HandleTypeDef hiwdg;
 extern ADC_HandleTypeDef hadc1;
@@ -55,6 +35,25 @@ extern TIM_HandleTypeDef htim2;
 uint32_t fullPeriod = 0; //The calculated period of the last measurement.
 bool measuredPeriodReady = false;//The measured period is ready
 float resultFrequency = 0;
+
+//Floating average
+uint32_t timerPeriodValues[NUMBER_OF_MEASUREMENTS];
+uint8_t timerPeriodInterrupts[NUMBER_OF_MEASUREMENTS];
+uint8_t measurementCounter = 0; // 0 - (NUMBER_OF_MEASUREMENTS - 1)
+
+uint32_t timerPeriodValues_temp[NUMBER_OF_MEASUREMENTS];
+uint8_t timerPeriodInterrupts_temp[NUMBER_OF_MEASUREMENTS];
+
+uint32_t fullPeriodArr[NUMBER_OF_MEASUREMENTS];
+uint32_t diffPeriodArr[NUMBER_OF_MEASUREMENTS];
+
+uint8_t i = 0, j =0; 
+uint8_t windowSize = 0; 
+uint64_t periodSum = 0;
+uint64_t diffSum = 0;
+
+uint32_t temp = 0;
+
 
 /**
  * \brief  Performs initialization. 
@@ -81,6 +80,105 @@ void setup( void )
     HAL_IWDG_Refresh(&hiwdg);
 }
 
+uint32_t calculatingDiffModule(uint32_t current, uint32_t other)
+{
+     if(current > other)
+     {
+       return current - other;
+     }
+     else
+     {
+       return other - current;
+     }
+}
+
+uint32_t calcPeriod(uint32_t interrupts, uint32_t remains)
+{
+   return 0xFFFF * interrupts + remains;
+}
+
+void calculatingAverage()
+{
+    if(measuredPeriodReady)
+    {
+       //Fast copy main to temp array.
+       memcpy(timerPeriodValues_temp, timerPeriodValues, 4 * NUMBER_OF_MEASUREMENTS); 
+       memcpy(timerPeriodInterrupts_temp, timerPeriodInterrupts, 1 * NUMBER_OF_MEASUREMENTS); 
+
+       //calculation of the period 
+       for(i = 0; i < NUMBER_OF_MEASUREMENTS; i++)
+       {
+         //fullPeriodArr[i] = calcPeriod(timerPeriodInterrupts_temp[i], timerPeriodValues_temp[i]);
+         fullPeriodArr[i] = calcPeriod(timerPeriodInterrupts[i], timerPeriodValues[i]);
+       } 
+
+      //calculation diff of the period. artificial delay.
+      for(i = 0; i < NUMBER_OF_MEASUREMENTS; i++)
+      {
+        diffSum = 0;
+        for(j = 0; j < NUMBER_OF_MEASUREMENTS; j++)
+        {
+          diffSum+= (uint64_t)calculatingDiffModule(fullPeriodArr[i], fullPeriodArr[j]); //Sum
+        }
+
+        //average 
+        diffPeriodArr[i] = (uint32_t)(diffSum / (NUMBER_OF_MEASUREMENTS - 1));
+      }  
+
+/*
+      fullPeriod = fullPeriodArr[0];
+      measuredPeriodReady = false; 
+
+      resultFrequency = 0;
+
+     if(fullPeriod > 0xFFFF)
+      {         
+        resultFrequency = ((float)70000000 / ((float)fullPeriod / 8 * 2));// - 0.0037;// - (59.7883 + 0.0318);//; //error clock tim2 35mhz 
+       
+        memcpy(ModbusRegister, &resultFrequency, sizeof(float)); //Convert to array.
+        //memcpy(&ModbusRegister[2], &fullPeriodArr[0], 4); //Convert to array.
+      }  
+
+  measuredPeriodReady = false; 
+       return;
+       */
+
+      HAL_IWDG_Refresh(&hiwdg);
+      
+      windowSize = NUMBER_OF_MEASUREMENTS;
+      periodSum = 0;
+      for(i = 0; i < NUMBER_OF_MEASUREMENTS; i++)
+      {
+          //Good values. 
+          if(diffPeriodArr[i] < MAX_DELTA)
+          {
+            periodSum+= fullPeriodArr[i];  
+            continue;
+          }
+
+          windowSize --;
+      }  
+      
+      fullPeriod = periodSum / windowSize;
+      measuredPeriodReady = false; 
+
+      resultFrequency = 0;
+
+      if(fullPeriod > 0xFFFF)
+      {         
+        resultFrequency = ((float)70000000 / ((float)fullPeriod / 8 * 2));// - 0.0037;// - (59.7883 + 0.0318);//; //error clock tim2 35mhz 
+       
+        memcpy(ModbusRegister, &resultFrequency, sizeof(float)); //Convert to array.
+        memcpy(&ModbusRegister[3], &fullPeriodArr[0], 4); //Convert to array.
+        memcpy(&ModbusRegister[5], &fullPeriodArr[1], 4); //Convert to array.
+        memcpy(&ModbusRegister[7], &fullPeriodArr[2], 4); //Convert to array.
+        memcpy(&ModbusRegister[9], &windowSize, 1); //Convert to array.
+      }  
+
+      HAL_IWDG_Refresh(&hiwdg); 
+    }  
+}
+
 /**
  * \brief   It is performed periodically in the body of the main loop.
  *
@@ -90,20 +188,8 @@ void loop( void )
     HAL_IWDG_Refresh(&hiwdg);
     uartDataHandler();
     
-    if(measuredPeriodReady)
-    {
-       fullPeriod = 0xFFFF * tim2InterruptsCurrent + period;
-       measuredPeriodReady = false; 
-
-      resultFrequency = 0;
-
-      if(fullPeriod > 0xFFFF)
-      {         
-        resultFrequency = ((float)70000000 / ((float)fullPeriod / 8 * 2));// - 0.0037;// - (59.7883 + 0.0318);//; //error clock tim2 35mhz 
-        memcpy(ModbusRegister, &resultFrequency, sizeof(float)); //Convert to array.
-      }   
-    }   
-
+    calculatingAverage();
+ 
     //Show on display.
     if(secondTimerHandler == true)
     {
@@ -113,6 +199,15 @@ void loop( void )
       {
          memcpy(ModbusRegister, &resultFrequency, sizeof(float)); //Convert to array.
       }
+
+      //PB8 - input turn off the display.
+      if(HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_8) == GPIO_PIN_RESET)
+      {
+        ssd1306_Fill(Black);
+        ssd1306_UpdateScreen();
+        return;
+      }
+
 
       ssd1306_Fill(Black);
       ssd1306_SetCursor(0, 20);  
@@ -126,11 +221,11 @@ void loop( void )
       sprintf(displayStr, "%d", fullPeriod);  //period
       ssd1306_WriteSpecialSimvolString(displayStr, SpecialCharacters_11x18, White);
       ssd1306_UpdateScreen();
-
+/*
       ssd1306_SetCursor(0, 0);
       sprintf(displayStr, "%d", tim2InterruptsCurrent); // bad param
       ssd1306_WriteSpecialSimvolString(displayStr, SpecialCharacters_11x18, White);
-      ssd1306_UpdateScreen();
+      ssd1306_UpdateScreen();*/
     
       HAL_IWDG_Refresh(&hiwdg);
       
@@ -138,53 +233,7 @@ void loop( void )
       tim2InterruptsCurrent = 0;
       resultFrequency = 0;
       secondTimerHandler = false;      
-    }
-
-    return;
-    HAL_Delay(1000);
-    //calculateCapacity(); 
-    
-   
-   
-   //uint32_t fullPeriod = 0xFFFF * tim2InterruptsCurrent + period;
-   //uint32_t fullPeriod = 70000000;
-   /*
-     Use quartz generator 119.6063 Hz
-     The quartz resonator has an incorrect frequency. Is not 10 1000.
-     Now TIM2 count 35mhz (10*3.5)
-     Check errors 59.8042 / 17.0867 = 3,500043893788736;
-   */
-   //double frequency = ((double)35000000 / (((double)fullPeriod) / 8)) - 17.0867; //error quarth 10mhz
-   //double frequency = ((double)35000000 / (double)fullPeriod) - 59.8042;//; //error clock tim2 35mhz
-
-
-/*
-   double frequency = ((double)70000000 / ((double)fullPeriod / 8 * 2)) - 0.0037;// - (59.7883 + 0.0318);//; //error clock tim2 35mhz
-   //Bad double frequency = ((double)70000000 / ((double)fullPeriod / 2)) - 59.7883;//; //error clock tim2 35mhz
-   sprintf(displayStr, "%10.7lf", frequency);
- 
-   ssd1306_WriteSpecialSimvolString(displayStr, SpecialCharacters_11x18, White);
-   ssd1306_UpdateScreen();
-
-    ssd1306_SetCursor(0, 40);
-    sprintf(displayStr, "%d", fullPeriod);  //period
-    ssd1306_WriteSpecialSimvolString(displayStr, SpecialCharacters_11x18, White);
-    ssd1306_UpdateScreen();
-
-    ssd1306_SetCursor(0, 0);
-    sprintf(displayStr, "%d", tim2InterruptsCurrent); // bad param
-    ssd1306_WriteSpecialSimvolString(displayStr, SpecialCharacters_11x18, White);
-    ssd1306_UpdateScreen();
- 
-   
-    HAL_IWDG_Refresh(&hiwdg); 
-    */
-    // We are waiting for the end of the packet transmission.
-   // if (UART.gState != HAL_UART_STATE_READY ) return;
-   // sendFreqToUsart(frequency);
-    //sendParametersToUsart(adcResults[1] ,actualVoltage, actualCurrent, actualCapacity, 1.23);
-
-   return;      
+    }   
 }
 
 void HAL_SYSTICK_Callback( void )
@@ -205,14 +254,23 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
         if(htim->Channel == HAL_TIM_ACTIVE_CHANNEL_3)
         {
             TIM2->CNT = 0;
+          
+            timerPeriodValues[measurementCounter] = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_3);
+            timerPeriodInterrupts[measurementCounter] = tim2InterruptsCounter;
 
-            //Synchronization with the main program
-            if(measuredPeriodReady == false) //The main program get the data
+            if(measurementCounter < NUMBER_OF_MEASUREMENTS - 1)
+            {              
+              measurementCounter ++;
+            }
+            else
             {
-              //Update current values.
-              tim2InterruptsCurrent = tim2InterruptsCounter;
-              period = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_3);
-              measuredPeriodReady = true;              
+              measurementCounter = 0;
+
+              //Synchronization with the main program
+              if(measuredPeriodReady == false) //The main program get the data
+              {              
+                measuredPeriodReady = true;              
+              }
             }
 
             tim2InterruptsCounter = 0;                    
@@ -226,5 +284,4 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
  {  
     tim2InterruptsCounter ++;   
  }
- return;
 }
