@@ -62,9 +62,9 @@ Then, USART_BRR = 0x1C7C hence USARTDIV = 0d455.73
 
   huart1.Instance = USART1;
   huart1.Init.BaudRate = BOUD_RATE;
-  huart1.Init.WordLength = UART_WORDLENGTH_8B;//UART_WORDLENGTH_9B; //For Even parity.
+  huart1.Init.WordLength = UART_WORDLENGTH_9B;//UART_WORDLENGTH_8B;// For Even parity.
   huart1.Init.StopBits = UART_STOPBITS_1;
-  huart1.Init.Parity = UART_PARITY_NONE;//UART_PARITY_EVEN;
+  huart1.Init.Parity = UART_PARITY_EVEN;//UART_PARITY_NONE;
   huart1.Init.Mode = UART_MODE_TX_RX;
   huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
   huart1.Init.OverSampling = UART_OVERSAMPLING_16;

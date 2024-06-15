@@ -14,6 +14,8 @@ uint8_t uartTimeCounter;
 uint8_t uartPacketComplatedFlag;
 
 uint16_t ModbusRegister[NUMBER_OF_REGISTER];
+uint16_t AnalogOutputHoldingRegister[NUMBER_OF_ANALOG_REGISTER];
+
 bool ModbusCoil[NUMBER_OF_COIL];
 
 char ModbusRx[BUFFERSIZE];
@@ -260,9 +262,8 @@ void makePacket_06(char *msg, uint8_t Lenght)
 	RegAddress = (msg[2] << 8) | (msg[3]);
 	RegValue = (msg[4] << 8) | (msg[5]);
 
-	ModbusRegister[RegAddress] = RegValue;
+	AnalogOutputHoldingRegister[RegAddress] = RegValue;
 	sendMessage(msg, Lenght);
-
 }
 
 /*Write multiple coils*/
