@@ -30,7 +30,6 @@ extern UART_HandleTypeDef huart1;
 /*Receive data interrupt*/
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-
 	RxInterruptFlag = SET;
 	ModbusRx[DataCounter++] = uartRxData;
 	if(DataCounter >= BUFFERSIZE)
@@ -79,6 +78,20 @@ void transmitDataMake(char *msg, uint8_t Lenght)
 
 }
 
+bool findData()
+{
+	for(int i = 0; i < DataCounter; i++)
+	{
+		if(ModbusRx[i] == SLAVEID)
+		{
+			memcpy(tempModbusRx, ModbusRx + i, (DataCounter - i) + 1);
+			return true;
+		}
+	}
+
+	return false;
+}
+
 /*Runs when data retrieval is complete and check CRC*/
 void uartDataHandler(void)
 {
@@ -88,12 +101,16 @@ void uartDataHandler(void)
 	if(uartPacketComplatedFlag == SET)     //Data receiving is finished
 	{
 		uartPacketComplatedFlag = RESET;
-	    memcpy(tempModbusRx, ModbusRx, DataCounter + 1);
+	    
+		//memcpy(tempModbusRx, ModbusRx, DataCounter + 1);
+		bool hasSlaveId = findData();
+
 	    tempCounter = DataCounter;
 		DataCounter = 0;
 		memset(ModbusRx, 0, BUFFERSIZE);
 		memset(ModbusTx, 0, BUFFERSIZE);
 
+		if(!hasSlaveId) return;
 		/*CRC Check*/
 		CRCValue = MODBUS_CRC16(tempModbusRx, tempCounter - 2);
 		rxCRC = (tempModbusRx[tempCounter -1] << 8) | (tempModbusRx[tempCounter - 2]);
