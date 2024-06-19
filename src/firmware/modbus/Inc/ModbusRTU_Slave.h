@@ -46,6 +46,8 @@ extern uint8_t uartTimeCounter;
 extern uint8_t uartPacketComplatedFlag;
 extern char ModbusRx[BUFFERSIZE];
 
+char ModbusString[10];
+
 /* Receiver functions */
 void uartDataHandler(void);
 void uartTimer(void);

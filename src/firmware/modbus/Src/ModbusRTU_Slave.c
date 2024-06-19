@@ -24,18 +24,22 @@ char ModbusTx[BUFFERSIZE];
 
 uint16_t rxCRC;
 
+bool hasInterrupt = false;
 
 extern UART_HandleTypeDef huart1;
 
 /*Receive data interrupt*/
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
+	hasInterrupt = true;
+
 	RxInterruptFlag = SET;
 	ModbusRx[DataCounter++] = uartRxData;
 	if(DataCounter >= BUFFERSIZE)
 	{
 		DataCounter  = 0;
 	}
+
 
 	HAL_UART_Receive_IT(&huart1 , &uartRxData , 1);
 	uartTimeCounter = 0;
@@ -78,13 +82,19 @@ void transmitDataMake(char *msg, uint8_t Lenght)
 
 }
 
+uint8_t data[2];
+
 bool findData()
 {
 	for(int i = 0; i < DataCounter; i++)
 	{
-		if(ModbusRx[i] == SLAVEID)
+		if(ModbusRx[i] == '\n')
 		{
-			memcpy(tempModbusRx, ModbusRx + i, (DataCounter - i) + 1);
+			
+			//memcpy(tempModbusRx, 0, (DataCounter - i) + 1);
+			//tempModbusRx[0] = ModbusRx[i - 1];
+			//tempModbusRx[1] = ModbusRx[i - 2];
+			memcpy(&ModbusString, &ModbusRx - DataCounter , i);		
 			return true;
 		}
 	}
@@ -111,16 +121,6 @@ void uartDataHandler(void)
 		memset(ModbusTx, 0, BUFFERSIZE);
 
 		if(!hasSlaveId) return;
-		/*CRC Check*/
-		CRCValue = MODBUS_CRC16(tempModbusRx, tempCounter - 2);
-		rxCRC = (tempModbusRx[tempCounter -1] << 8) | (tempModbusRx[tempCounter - 2]);
-
-		/*If the calculated CRC value and the received CRC value are equal and the Slave ID is correct, respond to the receiving data.  */
-		if(rxCRC == CRCValue && tempModbusRx[0] == SLAVEID)
-		{
-			transmitDataMake(&tempModbusRx[0], tempCounter);
-		}
-
 	}
 }
 
